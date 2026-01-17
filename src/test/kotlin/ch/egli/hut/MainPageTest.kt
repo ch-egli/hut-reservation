@@ -126,7 +126,7 @@ class MainPageTest {
 
         /* SET THE FOLLOWING VAULES ***************************************************************/
         private const val MIN_NUMBER_OF_BEDS = 3
-        private val preferredDates = listOf("27.03.2026", "28.03.2026", "26.04.2026", "12.03.2026")
+        private val preferredDates = listOf("27.03.2026", "28.03.2026", "26.04.2026")
         val hutNames = mapOf(
             213 to "Finsteraarhornhütte",
             9 to "Britanniahütte"
