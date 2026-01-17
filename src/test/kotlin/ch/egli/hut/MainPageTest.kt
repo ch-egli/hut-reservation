@@ -22,8 +22,9 @@ class MainPageTest {
         // Fix the issue https://github.com/SeleniumHQ/selenium/issues/11750
         Configuration.browserCapabilities = ChromeOptions().addArguments("--remote-allow-origins=*")
 
+        // Configuration settings do not work... :-(
         Configuration.browserSize = "1080x800"
-        Configuration.headless = false
+        Configuration.headless = true
     }
 
     @Test
@@ -75,10 +76,10 @@ class MainPageTest {
 
         if (SEND_MAIL) {
             logger.info("##### ${getCurrentTimestamp()} -- Sende E-Mail...")
-            sendEmail(
-                EMAIL_RECIPIENT,
+            EMAIL_RECIPIENT.sendEmail(
                 "Hüttenalarm für $hutName",
-                "Hütte: $hutName. Datum: $date " + HUETTEN_RESERVATIONS_URL + hutId + "/wizard")
+                "Hütte: $hutName. Datum: $date " + HUETTEN_RESERVATIONS_URL + hutId + "/wizard"
+            )
         }
     }
 
@@ -88,7 +89,7 @@ class MainPageTest {
         return formatter.format(time) ?: ""
     }
 
-    private fun sendEmail(toField: String, subject: String, text: String) {
+    private fun String.sendEmail(subject: String, text: String) {
         val props = Properties()
         props["mail.smtp.host"] = "mail.gmx.net"
         props["mail.smtp.port"] = "587"
@@ -106,7 +107,7 @@ class MainPageTest {
 
         val message = MimeMessage(session)
         message.setFrom(InternetAddress(username))
-        message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(toField))
+        message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(this))
         message.subject = subject
         message.setText(text)
 
