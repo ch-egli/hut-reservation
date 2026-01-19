@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory
 import java.net.URI
 import java.text.SimpleDateFormat
 import java.util.*
+import java.util.concurrent.ThreadLocalRandom
 
 class MainPageTest {
 
@@ -44,7 +45,10 @@ class MainPageTest {
                     }
                 }
             }
-            Thread.sleep(59_500)
+            // randomize interval to avoid potential filters...
+            val sleepTimeInMillis = generateRandomNumberBetween(40_000, 80_000)
+            logger.info("# sleeping for ${sleepTimeInMillis / 1000} seconds...")
+            Thread.sleep(sleepTimeInMillis)
         }
     }
 
@@ -112,6 +116,11 @@ class MainPageTest {
         message.setText(text)
 
         Transport.send(message)
+    }
+
+    fun generateRandomNumberBetween(min: Int, max: Int): Long {
+        require(min <= max) { "min must be smaller than max!" }
+        return ThreadLocalRandom.current().nextInt(min, max + 1).toLong()
     }
 
     companion object {
