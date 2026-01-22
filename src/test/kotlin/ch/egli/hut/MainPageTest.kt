@@ -34,14 +34,16 @@ class MainPageTest {
 
         while (!isAlarmSet) {
             for (hut in hutNames) {
-                val hutJsonData: JsonArray = getJsonDataForHut(hut.key)
+                val hutJsonData = getJsonDataForHut(hut.key) ?: continue
 
                 for (date in preferredDates) {
                     val availability = getAvailabilityForDate(hutJsonData, date)
                     logger.info("##### ${getCurrentTimestamp()} -- ${hut.value} - Anzahl freie Plätze für $date: $availability")
 
                     if (availability >= MIN_NUMBER_OF_BEDS && !isAlarmSet) {
-                        informMe(date, hut.key, hut.value)
+                        if (!isException(date, hut.key)) {
+                            informMe(date, hut.key, hut.value)
+                        }
                     }
                 }
             }
@@ -52,11 +54,15 @@ class MainPageTest {
         }
     }
 
-    private fun getJsonDataForHut(hutId: Int): JsonArray {
+    private fun getJsonDataForHut(hutId: Int): JsonArray? {
         val url = URI(HUETTEN_API_URL + hutId).toURL()
-        val jsonText = url.readText()
-        val jsonArray: JsonArray = Json.parseToJsonElement(jsonText).jsonArray
-        return jsonArray
+        return try {
+            val jsonText = url.readText()
+            Json.parseToJsonElement(jsonText).jsonArray
+        } catch (e: Exception) {
+            logger.error("##### ${getCurrentTimestamp()} -- Fehler beim Holen der Daten für Hütte ID: $hutId: ${e.message}", e)
+            null
+        }
     }
 
     private fun getAvailabilityForDate(hutData: JsonArray, date: String): Int {
@@ -85,6 +91,10 @@ class MainPageTest {
                 "Hütte: $hutName. Datum: $date " + HUETTEN_RESERVATIONS_URL + hutId + "/wizard"
             )
         }
+    }
+
+    private fun isException(date: String, hutId: Int): Boolean {
+        return exceptions[hutId]?.contains(date) == true
     }
 
     private fun getCurrentTimestamp(): String {
@@ -136,10 +146,15 @@ class MainPageTest {
 
         /* SET THE FOLLOWING VAULES ***************************************************************/
         private const val MIN_NUMBER_OF_BEDS = 3
-        private val preferredDates = listOf("27.03.2026", "28.03.2026", "26.04.2026")
+        private val preferredDates = listOf("26.03.2026", "27.03.2026", "28.03.2026", "26.04.2026", "27.04.2026")
         val hutNames = mapOf(
             213 to "Finsteraarhornhütte",
             9 to "Britanniahütte"
+        )
+
+        val exceptions = mapOf(
+            9 to listOf("26.03.2026", "27.04.2026"), // Britanniahütte is alread booked on these dates
+            213 to listOf() // Finsteraarhornhütte
         )
         /******************************************************************************************/
     }
