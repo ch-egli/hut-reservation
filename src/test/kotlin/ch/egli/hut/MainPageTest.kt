@@ -15,7 +15,7 @@ import java.net.URI
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.ThreadLocalRandom
-import kotlin.math.roundToLong
+import kotlin.math.roundToInt
 
 class MainPageTest {
 
@@ -39,7 +39,7 @@ class MainPageTest {
 
                 for (date in preferredDates) {
                     val availability = getAvailabilityForDate(hutJsonData, date)
-                    logger.info("##### ${getCurrentTimestamp()} -- ${hut.value} - Anzahl freie Plätze für $date: $availability")
+                    logger.info("${getCurrentTimestamp()} -- ${hut.value} - Anzahl freie Plätze für $date: $availability")
 
                     if (availability >= MIN_NUMBER_OF_BEDS && !isAlarmSet) {
                         if (!isException(date, hut.key)) {
@@ -50,9 +50,9 @@ class MainPageTest {
             }
 
             // randomize interval to avoid potential filters...
-            val sleepTimeInSeconds = generateRandomIntAround(60)
-            logger.info("# sleeping for $sleepTimeInSeconds seconds...")
-            Thread.sleep(sleepTimeInSeconds * 1000)
+            val sleepTimeInSeconds = generateRandomIntAround(POLL_INTERVAL_IN_SECONDS)
+            logger.info("sleeping for $sleepTimeInSeconds seconds...")
+            Thread.sleep((1000 * sleepTimeInSeconds).toLong())
         }
     }
 
@@ -62,7 +62,7 @@ class MainPageTest {
             val jsonText = url.readText()
             Json.parseToJsonElement(jsonText).jsonArray
         } catch (e: Exception) {
-            logger.error("##### ${getCurrentTimestamp()} -- Fehler beim Holen der Daten für Hütte ID: $hutId: ${e.message}", e)
+            logger.error("${getCurrentTimestamp()} -- Fehler beim Holen der Daten für Hütte ID: $hutId: ${e.message}", e)
             null
         }
     }
@@ -79,7 +79,7 @@ class MainPageTest {
     }
 
     private fun informMe(date: String, hutId: Int, hutName: String) {
-        logger.warn("##### ${getCurrentTimestamp()} -- ALARM! Es sind genügend Plätze in der $hutName frei!")
+        logger.warn("${getCurrentTimestamp()} -- ALARM! Es sind genügend Plätze in der $hutName frei!")
         isAlarmSet = true
 
         val driver = ChromeDriver()
@@ -87,10 +87,10 @@ class MainPageTest {
         driver.get("$HUETTEN_RESERVATIONS_URL$hutId/wizard")
 
         if (SEND_MAIL) {
-            logger.info("##### ${getCurrentTimestamp()} -- Sende E-Mail...")
+            logger.info("${getCurrentTimestamp()} -- Sende E-Mail...")
             sendEmail(
                 "Hüttenalarm für $hutName",
-                "Hütte: $hutName. Datum: $date " + HUETTEN_RESERVATIONS_URL + hutId + "/wizard"
+                "Hütte: $hutName. Datum: $date $HUETTEN_RESERVATIONS_URL$hutId/wizard"
             )
         }
     }
@@ -133,17 +133,17 @@ class MainPageTest {
         try {
             Transport.send(message)
         } catch (e: Exception) {
-            logger.error("##### ${getCurrentTimestamp()} -- Fehler beim Senden der E-Mail: ${e.message}", e)
+            logger.error("${getCurrentTimestamp()} -- Fehler beim Senden der E-Mail: ${e.message}", e)
         }
     }
 
     /**
      * Generates a random number in the range [givenNumber - 33%, givenNumber + 33%]
      */
-    fun generateRandomIntAround(baseValue: Long): Long {
-        val min = (baseValue * 0.67).roundToLong()
-        val max = (baseValue * 1.33).roundToLong()
-        return ThreadLocalRandom.current().nextLong(min, max + 1)
+    fun generateRandomIntAround(baseValue: Int): Int {
+        val min = (baseValue * 0.67).roundToInt()
+        val max = (baseValue * 1.33).roundToInt()
+        return ThreadLocalRandom.current().nextInt(min, max + 1)
     }
 
     companion object {
@@ -154,6 +154,7 @@ class MainPageTest {
         private const val HUETTEN_API_URL = "https://www.hut-reservation.org/api/v1/reservation/getHutAvailability?hutId="
         private const val HUETTEN_RESERVATIONS_URL = "https://www.hut-reservation.org/reservation/book-hut/"
 
+        private const val POLL_INTERVAL_IN_SECONDS = 60
 
         /* SET THE FOLLOWING VAULES ***************************************************************/
 
