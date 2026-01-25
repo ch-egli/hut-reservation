@@ -15,6 +15,7 @@ import java.net.URI
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.ThreadLocalRandom
+import kotlin.math.roundToLong
 
 class MainPageTest {
 
@@ -47,10 +48,11 @@ class MainPageTest {
                     }
                 }
             }
+
             // randomize interval to avoid potential filters...
-            val sleepTimeInMillis = generateRandomNumberBetween(40_000, 80_000)
-            logger.info("# sleeping for ${sleepTimeInMillis / 1000} seconds...")
-            Thread.sleep(sleepTimeInMillis)
+            val sleepTimeInSeconds = generateRandomIntAround(60)
+            logger.info("# sleeping for $sleepTimeInSeconds seconds...")
+            Thread.sleep(sleepTimeInSeconds * 1000)
         }
     }
 
@@ -86,7 +88,7 @@ class MainPageTest {
 
         if (SEND_MAIL) {
             logger.info("##### ${getCurrentTimestamp()} -- Sende E-Mail...")
-            EMAIL_RECIPIENT.sendEmail(
+            sendEmail(
                 "Hüttenalarm für $hutName",
                 "Hütte: $hutName. Datum: $date " + HUETTEN_RESERVATIONS_URL + hutId + "/wizard"
             )
@@ -103,34 +105,45 @@ class MainPageTest {
         return formatter.format(time) ?: ""
     }
 
-    private fun String.sendEmail(subject: String, text: String) {
+    private fun sendEmail(subject: String, text: String) {
+        val mailSmtpHost: String = System.getenv("MAIL_SMTP_HOST")
+        val mailUsername = System.getenv("EMAIL_USERNAME")
+        val mailPassword = System.getenv("EMAIL_PASSWORD")
+
+        val mailReceipient = System.getenv("MAIL_RECEIPIENT")
+
         val props = Properties()
-        props["mail.smtp.host"] = "mail.gmx.net"
+        props["mail.smtp.host"] = mailSmtpHost
         props["mail.smtp.port"] = "587"
         props["mail.smtp.auth"] = "true"
         props["mail.smtp.starttls.enable"] = "true"
 
-        val username = System.getenv("EMAIL_USERNAME") ?: throw IllegalStateException("EMAIL_USERNAME not set")
-        val password = System.getenv("EMAIL_PASSWORD") ?: throw IllegalStateException("EMAIL_PASSWORD not set")
-
         val session = Session.getInstance(props, object : Authenticator() {
             override fun getPasswordAuthentication(): PasswordAuthentication {
-                return PasswordAuthentication(username, password)
+                return PasswordAuthentication(mailUsername, mailPassword)
             }
         })
 
         val message = MimeMessage(session)
-        message.setFrom(InternetAddress(username))
-        message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(this))
+        message.setFrom(InternetAddress(mailUsername))
+        message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(mailReceipient))
         message.subject = subject
         message.setText(text)
 
-        Transport.send(message)
+        try {
+            Transport.send(message)
+        } catch (e: Exception) {
+            logger.error("##### ${getCurrentTimestamp()} -- Fehler beim Senden der E-Mail: ${e.message}", e)
+        }
     }
 
-    fun generateRandomNumberBetween(min: Int, max: Int): Long {
-        require(min <= max) { "min must be smaller than max!" }
-        return ThreadLocalRandom.current().nextInt(min, max + 1).toLong()
+    /**
+     * Generates a random number in the range [givenNumber - 33%, givenNumber + 33%]
+     */
+    fun generateRandomIntAround(baseValue: Long): Long {
+        val min = (baseValue * 0.67).roundToLong()
+        val max = (baseValue * 1.33).roundToLong()
+        return ThreadLocalRandom.current().nextLong(min, max + 1)
     }
 
     companion object {
@@ -141,10 +154,9 @@ class MainPageTest {
         private const val HUETTEN_API_URL = "https://www.hut-reservation.org/api/v1/reservation/getHutAvailability?hutId="
         private const val HUETTEN_RESERVATIONS_URL = "https://www.hut-reservation.org/reservation/book-hut/"
 
-        private const val SEND_MAIL = true
-        private const val EMAIL_RECIPIENT = "christian.egli4@gmail.com"
 
         /* SET THE FOLLOWING VAULES ***************************************************************/
+
         private const val MIN_NUMBER_OF_BEDS = 3
         private val preferredDates = listOf("26.03.2026", "27.03.2026", "28.03.2026", "26.04.2026", "27.04.2026")
         val hutNames = mapOf(
@@ -156,6 +168,16 @@ class MainPageTest {
             9 to listOf("26.03.2026", "27.04.2026"), // Britanniahütte is alread booked on these dates
             213 to listOf() // Finsteraarhornhütte
         )
+
+        /*
+        *  If you set SEND_MAIL to true, you have to provide the following environment variables:
+        *  - MAIL_SMTP_HOST: your e-mail SMTP host
+        *  - EMAIL_USERNAME: your SMTP host's username
+        *  - EMAIL_PASSWORD: your SMTP host's password
+        *  - MAIL_RECEIPIENT: the e-mail address where the alarm message is sent to
+        */
+        private const val SEND_MAIL = true
+
         /******************************************************************************************/
     }
 }
