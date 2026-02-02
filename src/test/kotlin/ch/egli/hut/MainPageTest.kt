@@ -167,7 +167,7 @@ class MainPageTest {
 
         val exceptions = mapOf(
             9 to listOf("26.03.2026", "27.04.2026"), // Britanniahütte is alread booked on these dates
-            213 to listOf() // Finsteraarhornhütte
+            213 to listOf("26.03.2026") // Finsteraarhornhütte
         )
 
         /*
