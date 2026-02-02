@@ -14,7 +14,7 @@
         <maven.compiler.target>21</maven.compiler.target>
         <maven.compiler.source>21</maven.compiler.source>
         <junit.version>5.10.2</junit.version>
-        <kotlin.version>2.1.0</kotlin.version>
+        <kotlin.version>2.2.0</kotlin.version>
     </properties>
 
     <dependencies>
